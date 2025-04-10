@@ -8,7 +8,7 @@ A Nix-based PostgreSQL development environment that provides a user-managed Post
 - User-managed PostgreSQL instance (runs under your user account)
 - Simple management script for starting/stopping the server
 - Default configuration optimized for development
-- Data stored in your home directory (`~/.local/share/postgresql`)
+- Data stored in a configurable directory
 
 ## Usage
 
