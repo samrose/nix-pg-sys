@@ -98,10 +98,7 @@
                   fi
                   ${postgresqlPkg.postgresql_17}/bin/pg_ctl -D "${config.config.postgresql.dataDir}" -o "-c config_file=$out/etc/postgresql.conf" start
                   # Execute steps if enabled
-                  ${lib.optionalString config.config.steps.enable ''
-                    psql -U ${config.config.steps.dbUser} -d ${config.config.steps.database} -p ${toString config.config.postgresql.port} -c "CREATE TABLE example (id SERIAL PRIMARY KEY, name VARCHAR(255));"
-                    psql -U ${config.config.steps.dbUser} -d ${config.config.steps.database} -p ${toString config.config.postgresql.port} -c "\\d example"
-                  ''}
+                  ${lib.optionalString config.config.steps.enable (lib.concatStringsSep "\n" config.config.steps.commands)}
                   ;;
                 stop)
                   ${postgresqlPkg.postgresql_17}/bin/pg_ctl -D "${config.config.postgresql.dataDir}" stop
