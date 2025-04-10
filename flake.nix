@@ -1,5 +1,5 @@
 {
-  description = "PostgreSQL configuration with Nix modules";
+  description = "PostgreSQL configuration with Nix modules and steps";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -7,7 +7,6 @@
 
   outputs = { self, nixpkgs }:
     let
-      # Define supported systems
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -15,29 +14,26 @@
         "aarch64-darwin"
       ];
 
-      # Helper function to create outputs for each system
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
 
-      # Create PostgreSQL configuration for a given system
       mkPostgresqlConfig = system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
           lib = pkgs.lib;
 
-          # Import PostgreSQL package
           postgresqlPkg = (import ./postgresql) pkgs;
 
-          # Platform-specific settings
           platformSettings = if lib.hasSuffix "darwin" system then {
-            effective_io_concurrency = "0";  # macOS doesn't support posix_fadvise
+            effective_io_concurrency = "0";
           } else {
             effective_io_concurrency = "200";
           };
 
-          # Evaluate the modules
+          # Evaluate both the PostgreSQL and steps modules
           config = lib.evalModules {
             modules = [
               ./postgresql-module.nix
+              ./steps-module.nix
               {
                 _module.args.pkgs = pkgs;
                 postgresql = {
@@ -59,14 +55,23 @@
                     max_wal_size = "4GB";
                   } // platformSettings;
                 };
+                steps = {
+                  enable = true;
+                  port = config.config.postgresql.port;
+                  database = "postgres";
+                  dbUser = "samrose";  # Default database user
+                  commands = [
+                    "psql -U ${config.config.steps.dbUser} -d ${config.config.steps.database} -p ${toString config.config.postgresql.port} -c \"CREATE TABLE example (id SERIAL PRIMARY KEY, name VARCHAR(255));\""
+                    "psql -U ${config.config.steps.dbUser} -d ${config.config.steps.database} -p ${toString config.config.postgresql.port} -c \"\\d example\""
+                  ];
+                };
               }
             ];
           };
 
-          # Build a derivation from the evaluated config
           postgresqlConfigOutput = pkgs.stdenv.mkDerivation {
             name = "postgresql-config";
-            src = pkgs.runCommand "empty" {} "mkdir $out";
+            src = ./.;
             buildInputs = [ pkgs.bash postgresqlPkg.postgresql_17 ];
 
             buildPhase = ''
@@ -80,9 +85,10 @@
               ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: value: "${name} = ${value}") config.config.postgresql.settings)}
               EOF
 
-              # Write a script to manage PostgreSQL
+              # Write a script to manage PostgreSQL and execute steps
               cat > $out/bin/manage-postgresql <<EOF
               #!/bin/sh
+              
               case "\$1" in
                 start)
                   mkdir -p "${config.config.postgresql.dataDir}"
@@ -91,6 +97,11 @@
                     ${postgresqlPkg.postgresql_17}/bin/initdb -D "${config.config.postgresql.dataDir}" --no-locale
                   fi
                   ${postgresqlPkg.postgresql_17}/bin/pg_ctl -D "${config.config.postgresql.dataDir}" -o "-c config_file=$out/etc/postgresql.conf" start
+                  # Execute steps if enabled
+                  ${lib.optionalString config.config.steps.enable ''
+                    psql -U ${config.config.steps.dbUser} -d ${config.config.steps.database} -p ${toString config.config.postgresql.port} -c "CREATE TABLE example (id SERIAL PRIMARY KEY, name VARCHAR(255));"
+                    psql -U ${config.config.steps.dbUser} -d ${config.config.steps.database} -p ${toString config.config.postgresql.port} -c "\\d example"
+                  ''}
                   ;;
                 stop)
                   ${postgresqlPkg.postgresql_17}/bin/pg_ctl -D "${config.config.postgresql.dataDir}" stop

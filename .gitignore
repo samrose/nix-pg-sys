@@ -3,3 +3,4 @@ result
 result-*
 ~
 postgresql-datadir
+.env
