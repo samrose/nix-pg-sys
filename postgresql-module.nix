@@ -42,6 +42,6 @@
   };
 
   config = lib.mkIf config.postgresql.enable {
-    # No NixOS-specific options here
+    
   };
 } 
