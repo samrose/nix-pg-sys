@@ -1,16 +1,14 @@
-# Nix System Configuration
+# PostgreSQL Development Environment
 
-A simple Nix flake that demonstrates how to create a custom system configuration using Nix modules. This project shows how to:
-
-- Create a custom Nix module
-- Build a derivation that includes both configuration files and executable scripts
-- Handle path resolution between configuration files and scripts in the Nix store
+A Nix-based PostgreSQL development environment that provides a user-managed PostgreSQL instance. This project sets up PostgreSQL 17 with a simple management interface, allowing you to run a personal PostgreSQL server for development purposes.
 
 ## Features
 
-- Custom greeting message configuration
-- Executable script that reads from the configuration
-- Proper path handling between components in the Nix store
+- PostgreSQL 17 with JIT support
+- User-managed PostgreSQL instance (runs under your user account)
+- Simple management script for starting/stopping the server
+- Default configuration optimized for development
+- Data stored in your home directory (`~/.local/share/postgresql`)
 
 ## Usage
 
@@ -19,31 +17,56 @@ A simple Nix flake that demonstrates how to create a custom system configuration
    nix build .
    ```
 
-2. Run the greeting script:
+2. Start PostgreSQL:
    ```bash
-   ./result/bin/run-greeting
+   ./result/bin/manage-postgresql start
    ```
+
+3. Connect to PostgreSQL:
+   ```bash
+   psql
+   ```
+   This will connect to your default database (named after your username)
+
+4. Stop PostgreSQL when done:
+   ```bash
+   ./result/bin/manage-postgresql stop
+   ```
+
+## Default Configuration
+
+- Runs on port 5432
+- Data directory: `~/.local/share/postgresql`
+- Default database: your username
+- Runs under your user account (no separate postgres user)
+- Optimized settings for development:
+  - max_connections = 100
+  - shared_buffers = 128MB
+  - effective_cache_size = 512MB
+  - maintenance_work_mem = 64MB
+  - And more...
+
+## Management Commands
+
+The `manage-postgresql` script provides these commands:
+- `start`: Start the PostgreSQL server
+- `stop`: Stop the PostgreSQL server
+- `restart`: Restart the PostgreSQL server
+- `status`: Check the server status
+
+## Development Shell
+
+A development shell is provided with PostgreSQL tools:
+```bash
+nix develop
+```
 
 ## Project Structure
 
 - `flake.nix`: Main flake definition
-- `my-module.nix`: Custom Nix module that defines the configuration options
+- `postgresql/`: PostgreSQL package definition
 - `LICENSE`: MIT License
 - `.gitignore`: Excludes Nix build artifacts
-
-## How It Works
-
-The project consists of two main components:
-
-1. A Nix module (`my-module.nix`) that defines:
-   - A greeting message
-   - A config file path
-   - A script that reads the greeting
-
-2. A flake that:
-   - Evaluates the module
-   - Creates a derivation that installs both the config file and script
-   - Ensures proper path resolution between components
 
 ## License
 
