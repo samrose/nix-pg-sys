@@ -40,7 +40,7 @@
                   enable = true;
                   package = postgresqlPkg.postgresql_17;
                   dataDir = "postgresql-datadir";
-                  port = 5433;
+                  port = 5432;
                   settings = {
                     max_connections = "100";
                     shared_buffers = "128MB";
@@ -59,10 +59,12 @@
                   enable = true;
                   port = config.config.postgresql.port;
                   database = "postgres";
-                  dbUser = "samrose";  # Default database user
+                  dbUser = "postgres";  # Default database user
                   commands = [
-                    "psql -U ${config.config.steps.dbUser} -d ${config.config.steps.database} -p ${toString config.config.postgresql.port} -c \"CREATE TABLE example (id SERIAL PRIMARY KEY, name VARCHAR(255));\""
-                    "psql -U ${config.config.steps.dbUser} -d ${config.config.steps.database} -p ${toString config.config.postgresql.port} -c \"\\d example\""
+                    "psql -U postgres -d postgres -p ${toString config.config.postgresql.port} -c \"CREATE ROLE postgres WITH LOGIN SUPERUSER PASSWORD 'postgres';\""
+                    "psql -U postgres -d postgres -p ${toString config.config.postgresql.port} -c \"CREATE DATABASE postgres OWNER postgres;\""
+                    "psql -U postgres -d postgres -p ${toString config.config.postgresql.port} -c \"CREATE TABLE example (id SERIAL PRIMARY KEY, name VARCHAR(255));\""
+                    "psql -U postgres -d postgres -p ${toString config.config.postgresql.port} -c \"\\d example\""
                   ];
                 };
               }
